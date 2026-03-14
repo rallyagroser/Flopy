@@ -1,315 +1,484 @@
-const STORAGE_KEY = 'schoolSystemData';
-
-const defaultState = {
-  careers: [],
-  classes: [],
-  years: [],
-  students: [],
-  links: {
-    careerYear: [],
-    yearClass: [],
-    studentYear: [],
-  },
+const KEYS = {
+  usuarios: 'usuarios',
+  sesion: 'usuarioActivo',
+  data: 'schoolSystemDataV2',
 };
 
-const state = loadState();
+const DEFAULT_USUARIO = {
+  id: 1,
+  nombre: 'Administrador',
+  usuario: 'admin',
+  password: '1234',
+  rol: 'admin',
+};
 
-function loadState() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return structuredClone(defaultState);
+const defaultData = {
+  alumnos: [],
+  carreras: [],
+  clases: [],
+  anios: [],
+};
 
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      ...structuredClone(defaultState),
-      ...parsed,
-      links: {
-        ...structuredClone(defaultState).links,
-        ...(parsed.links || {}),
-      },
-    };
-  } catch {
-    return structuredClone(defaultState);
-  }
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function uid(prefix) {
-  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-}
+let data = loadData();
 
 const refs = {
+  loginView: document.getElementById('login-view'),
+  appView: document.getElementById('app-view'),
+  loginForm: document.getElementById('login-form'),
+  loginUsuario: document.getElementById('login-usuario'),
+  loginPassword: document.getElementById('login-password'),
+  loginMessage: document.getElementById('login-message'),
+  welcomeText: document.getElementById('welcome-text'),
+  logoutBtn: document.getElementById('logout-btn'),
+
   tabButtons: document.querySelectorAll('.tab-btn'),
   tabContents: document.querySelectorAll('.tab-content'),
 
-  careerForm: document.getElementById('career-form'),
-  classForm: document.getElementById('class-form'),
-  yearForm: document.getElementById('year-form'),
-  studentForm: document.getElementById('student-form'),
+  statAlumnos: document.getElementById('stat-alumnos'),
+  statCarreras: document.getElementById('stat-carreras'),
+  statClases: document.getElementById('stat-clases'),
+  statAnios: document.getElementById('stat-anios'),
 
-  careerList: document.getElementById('career-list'),
-  classList: document.getElementById('class-list'),
-  yearList: document.getElementById('year-list'),
-  studentList: document.getElementById('student-list'),
+  formAlumno: document.getElementById('form-alumno'),
+  alumnoId: document.getElementById('alumno-id'),
+  alumnoNombre: document.getElementById('alumno-nombre'),
+  alumnoApellido: document.getElementById('alumno-apellido'),
+  alumnoDocumento: document.getElementById('alumno-documento'),
+  alumnoCorreo: document.getElementById('alumno-correo'),
+  alumnoSearch: document.getElementById('alumno-search'),
+  alumnoMessage: document.getElementById('alumno-message'),
+  alumnoSubmit: document.getElementById('alumno-submit'),
+  tablaAlumnos: document.getElementById('tabla-alumnos'),
 
-  careerYearForm: document.getElementById('career-year-form'),
-  yearClassForm: document.getElementById('year-class-form'),
-  studentYearForm: document.getElementById('student-year-form'),
+  formCarrera: document.getElementById('form-carrera'),
+  carreraId: document.getElementById('carrera-id'),
+  carreraNombre: document.getElementById('carrera-nombre'),
+  carreraMessage: document.getElementById('carrera-message'),
+  carreraSubmit: document.getElementById('carrera-submit'),
+  tablaCarreras: document.getElementById('tabla-carreras'),
 
-  careerSelect: document.getElementById('career-select'),
-  yearForCareerSelect: document.getElementById('year-for-career-select'),
-  yearForClassSelect: document.getElementById('year-for-class-select'),
-  classSelect: document.getElementById('class-select'),
-  studentSelect: document.getElementById('student-select'),
-  yearForStudentSelect: document.getElementById('year-for-student-select'),
+  formClase: document.getElementById('form-clase'),
+  claseId: document.getElementById('clase-id'),
+  claseNombre: document.getElementById('clase-nombre'),
+  claseMessage: document.getElementById('clase-message'),
+  claseSubmit: document.getElementById('clase-submit'),
+  tablaClases: document.getElementById('tabla-clases'),
 
-  careerYearList: document.getElementById('career-year-list'),
-  yearClassList: document.getElementById('year-class-list'),
-  studentYearList: document.getElementById('student-year-list'),
-
-  summaryBody: document.getElementById('student-summary-body'),
-  emptyRowTemplate: document.getElementById('empty-row-template'),
+  formAnio: document.getElementById('form-anio'),
+  anioId: document.getElementById('anio-id'),
+  anioNombre: document.getElementById('anio-nombre'),
+  anioMessage: document.getElementById('anio-message'),
+  anioSubmit: document.getElementById('anio-submit'),
+  tablaAnios: document.getElementById('tabla-anios'),
 };
 
-function setTabs() {
+// ---------------------- utilidades ----------------------
+function loadJSON(key, fallback) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return structuredClone(fallback);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return structuredClone(fallback);
+  }
+}
+
+function saveData() {
+  localStorage.setItem(KEYS.data, JSON.stringify(data));
+}
+
+function loadData() {
+  const parsed = loadJSON(KEYS.data, defaultData);
+  return {
+    ...structuredClone(defaultData),
+    ...parsed,
+  };
+}
+
+function normalize(value) {
+  return value.trim().toLowerCase();
+}
+
+function nextId(list) {
+  if (!list.length) return 1;
+  return Math.max(...list.map((item) => Number(item.id) || 0)) + 1;
+}
+
+function showMessage(element, text, type = '') {
+  element.textContent = text;
+  element.className = `message ${type}`.trim();
+}
+
+function clearMessage(element) {
+  showMessage(element, '', '');
+}
+
+function ensureDefaultUsuarios() {
+  const usuarios = loadJSON(KEYS.usuarios, []);
+  if (!usuarios.length) {
+    localStorage.setItem(KEYS.usuarios, JSON.stringify([DEFAULT_USUARIO]));
+  }
+}
+
+// ---------------------- autenticación ----------------------
+function obtenerUsuarios() {
+  return loadJSON(KEYS.usuarios, []);
+}
+
+function obtenerSesion() {
+  return loadJSON(KEYS.sesion, null);
+}
+
+function guardarSesion(usuario) {
+  localStorage.setItem(
+    KEYS.sesion,
+    JSON.stringify({
+      id: usuario.id,
+      nombre: usuario.nombre,
+      usuario: usuario.usuario,
+      rol: usuario.rol,
+    }),
+  );
+}
+
+function cerrarSesion() {
+  localStorage.removeItem(KEYS.sesion);
+  refs.loginForm.reset();
+  clearMessage(refs.loginMessage);
+  toggleViews();
+}
+
+function validarCredenciales(usuarioIngresado, passwordIngresado) {
+  const usuarios = obtenerUsuarios();
+  return usuarios.find(
+    (u) => u.usuario === usuarioIngresado && u.password === passwordIngresado,
+  );
+}
+
+function toggleViews() {
+  const sesion = obtenerSesion();
+  const haySesion = Boolean(sesion);
+
+  refs.loginView.classList.toggle('hidden', haySesion);
+  refs.appView.classList.toggle('hidden', !haySesion);
+
+  if (haySesion) {
+    refs.welcomeText.textContent = `Bienvenido, ${sesion.nombre} (${sesion.rol})`;
+    renderAll();
+  }
+}
+
+function setupAuthEvents() {
+  refs.loginForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const usuario = refs.loginUsuario.value.trim();
+    const password = refs.loginPassword.value.trim();
+
+    if (!usuario || !password) {
+      showMessage(refs.loginMessage, 'Debe completar usuario y contraseña.', 'error');
+      return;
+    }
+
+    const encontrado = validarCredenciales(usuario, password);
+    if (!encontrado) {
+      showMessage(refs.loginMessage, 'Credenciales inválidas.', 'error');
+      return;
+    }
+
+    guardarSesion(encontrado);
+    refs.loginForm.reset();
+    clearMessage(refs.loginMessage);
+    toggleViews();
+  });
+
+  refs.logoutBtn.addEventListener('click', cerrarSesion);
+}
+
+// ---------------------- navegación / dashboard ----------------------
+function setupTabs() {
   refs.tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      const tabId = btn.dataset.tab;
       refs.tabButtons.forEach((b) => b.classList.remove('active'));
-      refs.tabContents.forEach((s) => s.classList.remove('active'));
+      refs.tabContents.forEach((section) => section.classList.remove('active'));
 
       btn.classList.add('active');
-      document.getElementById(tabId).classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
     });
   });
 }
 
-function renderSimpleList(container, items, formatter) {
-  container.innerHTML = '';
-  if (!items.length) {
-    const li = document.createElement('li');
-    li.textContent = 'Sin registros.';
-    container.appendChild(li);
+function renderDashboard() {
+  refs.statAlumnos.textContent = data.alumnos.length;
+  refs.statCarreras.textContent = data.carreras.length;
+  refs.statClases.textContent = data.clases.length;
+  refs.statAnios.textContent = data.anios.length;
+}
+
+// ---------------------- alumnos ----------------------
+function alumnoDuplicado(payload, excludeId = null) {
+  return data.alumnos.some((alumno) => {
+    if (excludeId !== null && Number(alumno.id) === Number(excludeId)) return false;
+    return (
+      normalize(alumno.documento) === normalize(payload.documento)
+      || normalize(alumno.correo) === normalize(payload.correo)
+    );
+  });
+}
+
+function resetAlumnoForm() {
+  refs.formAlumno.reset();
+  refs.alumnoId.value = '';
+  refs.alumnoSubmit.textContent = 'Guardar alumno';
+}
+
+function renderAlumnos() {
+  const filtro = normalize(refs.alumnoSearch.value || '');
+  const alumnosFiltrados = data.alumnos.filter((a) => {
+    if (!filtro) return true;
+    return `${a.nombre} ${a.apellido} ${a.documento} ${a.correo}`.toLowerCase().includes(filtro);
+  });
+
+  refs.tablaAlumnos.innerHTML = '';
+  if (!alumnosFiltrados.length) {
+    refs.tablaAlumnos.innerHTML = '<tr><td class="empty-row" colspan="4">No hay alumnos para mostrar.</td></tr>';
     return;
   }
 
-  items.forEach((item) => {
-    const li = document.createElement('li');
-    li.textContent = formatter(item);
-    container.appendChild(li);
-  });
-}
-
-function fillSelect(select, items, placeholder, format = (i) => i.name) {
-  select.innerHTML = '';
-  const option = document.createElement('option');
-  option.value = '';
-  option.disabled = true;
-  option.selected = true;
-  option.textContent = placeholder;
-  select.appendChild(option);
-
-  items.forEach((item) => {
-    const opt = document.createElement('option');
-    opt.value = item.id;
-    opt.textContent = format(item);
-    select.appendChild(opt);
-  });
-}
-
-function byId(list, id) {
-  return list.find((item) => item.id === id);
-}
-
-function renderEntityLists() {
-  renderSimpleList(refs.careerList, state.careers, (c) => c.name);
-  renderSimpleList(refs.classList, state.classes, (c) => c.name);
-  renderSimpleList(refs.yearList, state.years, (y) => y.name);
-  renderSimpleList(refs.studentList, state.students, (s) => `${s.firstName} ${s.lastName} | ${s.document} | ${s.email}`);
-}
-
-function renderAssociationLists() {
-  renderSimpleList(refs.careerYearList, state.links.careerYear, (link) => {
-    const career = byId(state.careers, link.careerId);
-    const year = byId(state.years, link.yearId);
-    return `${career?.name || 'Carrera eliminada'} ↔ ${year?.name || 'Año eliminado'}`;
-  });
-
-  renderSimpleList(refs.yearClassList, state.links.yearClass, (link) => {
-    const year = byId(state.years, link.yearId);
-    const classItem = byId(state.classes, link.classId);
-    return `${year?.name || 'Año eliminado'} ↔ ${classItem?.name || 'Clase eliminada'}`;
-  });
-
-  renderSimpleList(refs.studentYearList, state.links.studentYear, (link) => {
-    const student = byId(state.students, link.studentId);
-    const year = byId(state.years, link.yearId);
-    return `${student ? `${student.firstName} ${student.lastName}` : 'Alumno eliminado'} ↔ ${year?.name || 'Año eliminado'}`;
-  });
-}
-
-function renderSelectors() {
-  fillSelect(refs.careerSelect, state.careers, 'Selecciona carrera');
-  fillSelect(refs.yearForCareerSelect, state.years, 'Selecciona año');
-  fillSelect(refs.yearForClassSelect, state.years, 'Selecciona año');
-  fillSelect(refs.classSelect, state.classes, 'Selecciona clase');
-  fillSelect(refs.studentSelect, state.students, 'Selecciona alumno', (s) => `${s.firstName} ${s.lastName}`);
-  fillSelect(refs.yearForStudentSelect, state.years, 'Selecciona año');
-}
-
-function careerNamesByYear(yearId) {
-  return state.links.careerYear
-    .filter((link) => link.yearId === yearId)
-    .map((link) => byId(state.careers, link.careerId)?.name)
-    .filter(Boolean);
-}
-
-function renderSummaryTable() {
-  refs.summaryBody.innerHTML = '';
-  if (!state.students.length) {
-    const row = refs.emptyRowTemplate.content.firstElementChild.cloneNode(true);
-    refs.summaryBody.appendChild(row);
-    return;
-  }
-
-  state.students.forEach((student) => {
-    const relation = state.links.studentYear.find((link) => link.studentId === student.id);
-    const yearName = relation ? byId(state.years, relation.yearId)?.name || 'Año no encontrado' : 'Sin año asignado';
-
-    let career = 'Sin carrera asociada';
-    if (relation) {
-      const careers = careerNamesByYear(relation.yearId);
-      if (careers.length) career = careers.join(', ');
-    }
-
+  alumnosFiltrados.forEach((alumno) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${student.firstName} ${student.lastName}</td>
-      <td>${career}</td>
-      <td>${yearName}</td>
+      <td>${alumno.nombre} ${alumno.apellido}</td>
+      <td>${alumno.documento}</td>
+      <td>${alumno.correo}</td>
+      <td>
+        <div class="actions">
+          <button type="button" class="edit-btn" data-id="${alumno.id}">Editar</button>
+          <button type="button" class="delete-btn" data-id="${alumno.id}">Eliminar</button>
+        </div>
+      </td>
     `;
-    refs.summaryBody.appendChild(tr);
+    refs.tablaAlumnos.appendChild(tr);
   });
 }
 
-function rerender() {
-  saveState();
-  renderEntityLists();
-  renderSelectors();
-  renderAssociationLists();
-  renderSummaryTable();
-}
+function setupAlumnos() {
+  refs.formAlumno.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const payload = {
+      nombre: refs.alumnoNombre.value.trim(),
+      apellido: refs.alumnoApellido.value.trim(),
+      documento: refs.alumnoDocumento.value.trim(),
+      correo: refs.alumnoCorreo.value.trim(),
+    };
 
-function isDuplicate(list, check) {
-  return list.some(check);
-}
+    if (!payload.nombre || !payload.apellido || !payload.documento || !payload.correo) {
+      showMessage(refs.alumnoMessage, 'Complete todos los campos del alumno.', 'error');
+      return;
+    }
 
-refs.careerForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const input = document.getElementById('career-name');
-  const name = input.value.trim();
-  if (!name || isDuplicate(state.careers, (item) => item.name.toLowerCase() === name.toLowerCase())) return;
+    const editId = refs.alumnoId.value;
+    if (alumnoDuplicado(payload, editId || null)) {
+      showMessage(refs.alumnoMessage, 'Documento o correo ya existe en otro alumno.', 'error');
+      return;
+    }
 
-  state.careers.push({ id: uid('career'), name });
-  input.value = '';
-  rerender();
-});
+    if (editId) {
+      const idx = data.alumnos.findIndex((a) => Number(a.id) === Number(editId));
+      if (idx >= 0) data.alumnos[idx] = { id: Number(editId), ...payload };
+      showMessage(refs.alumnoMessage, 'Alumno actualizado correctamente.', 'success');
+    } else {
+      data.alumnos.push({ id: nextId(data.alumnos), ...payload });
+      showMessage(refs.alumnoMessage, 'Alumno creado correctamente.', 'success');
+    }
 
-refs.classForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const input = document.getElementById('class-name');
-  const name = input.value.trim();
-  if (!name || isDuplicate(state.classes, (item) => item.name.toLowerCase() === name.toLowerCase())) return;
-
-  state.classes.push({ id: uid('class'), name });
-  input.value = '';
-  rerender();
-});
-
-refs.yearForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const input = document.getElementById('year-name');
-  const name = input.value.trim();
-  if (!name || isDuplicate(state.years, (item) => item.name.toLowerCase() === name.toLowerCase())) return;
-
-  state.years.push({ id: uid('year'), name });
-  input.value = '';
-  rerender();
-});
-
-refs.studentForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-
-  const firstNameInput = document.getElementById('student-firstname');
-  const lastNameInput = document.getElementById('student-lastname');
-  const documentInput = document.getElementById('student-id');
-  const emailInput = document.getElementById('student-email');
-
-  const firstName = firstNameInput.value.trim();
-  const lastName = lastNameInput.value.trim();
-  const documentNumber = documentInput.value.trim();
-  const email = emailInput.value.trim();
-
-  if (!firstName || !lastName || !documentNumber || !email) return;
-  if (isDuplicate(state.students, (s) => s.document === documentNumber || s.email.toLowerCase() === email.toLowerCase())) return;
-
-  state.students.push({
-    id: uid('student'),
-    firstName,
-    lastName,
-    document: documentNumber,
-    email,
+    saveData();
+    resetAlumnoForm();
+    renderAll();
   });
 
-  refs.studentForm.reset();
-  rerender();
-});
+  refs.alumnoSearch.addEventListener('input', renderAlumnos);
 
-refs.careerYearForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const careerId = refs.careerSelect.value;
-  const yearId = refs.yearForCareerSelect.value;
-  if (!careerId || !yearId) return;
+  refs.tablaAlumnos.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
 
-  const exists = isDuplicate(state.links.careerYear, (link) => link.careerId === careerId && link.yearId === yearId);
-  if (!exists) state.links.careerYear.push({ careerId, yearId });
+    const id = Number(target.dataset.id);
+    const alumno = data.alumnos.find((a) => Number(a.id) === id);
+    if (!alumno) return;
 
-  refs.careerYearForm.reset();
-  rerender();
-});
+    if (target.classList.contains('edit-btn')) {
+      refs.alumnoId.value = alumno.id;
+      refs.alumnoNombre.value = alumno.nombre;
+      refs.alumnoApellido.value = alumno.apellido;
+      refs.alumnoDocumento.value = alumno.documento;
+      refs.alumnoCorreo.value = alumno.correo;
+      refs.alumnoSubmit.textContent = 'Actualizar alumno';
+      showMessage(refs.alumnoMessage, 'Editando alumno seleccionado.', 'success');
+    }
 
-refs.yearClassForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const yearId = refs.yearForClassSelect.value;
-  const classId = refs.classSelect.value;
-  if (!yearId || !classId) return;
+    if (target.classList.contains('delete-btn')) {
+      const ok = confirm(`¿Seguro que desea eliminar al alumno ${alumno.nombre} ${alumno.apellido}?`);
+      if (!ok) return;
 
-  const exists = isDuplicate(state.links.yearClass, (link) => link.yearId === yearId && link.classId === classId);
-  if (!exists) state.links.yearClass.push({ yearId, classId });
+      data.alumnos = data.alumnos.filter((a) => Number(a.id) !== id);
+      saveData();
+      showMessage(refs.alumnoMessage, 'Alumno eliminado correctamente.', 'success');
+      resetAlumnoForm();
+      renderAll();
+    }
+  });
+}
 
-  refs.yearClassForm.reset();
-  rerender();
-});
+// ---------------------- carreras / clases / años ----------------------
+function buildSimpleCRUD(config) {
+  const { nombreEntidad, collectionKey, form, idInput, nombreInput, tabla, submitBtn, message } = config;
 
-refs.studentYearForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const studentId = refs.studentSelect.value;
-  const yearId = refs.yearForStudentSelect.value;
-  if (!studentId || !yearId) return;
-
-  const idx = state.links.studentYear.findIndex((link) => link.studentId === studentId);
-  if (idx >= 0) {
-    state.links.studentYear[idx].yearId = yearId;
-  } else {
-    state.links.studentYear.push({ studentId, yearId });
+  function duplicado(nombre, excludeId = null) {
+    return data[collectionKey].some((item) => {
+      if (excludeId !== null && Number(item.id) === Number(excludeId)) return false;
+      return normalize(item.nombre) === normalize(nombre);
+    });
   }
 
-  refs.studentYearForm.reset();
-  rerender();
+  function resetForm() {
+    form.reset();
+    idInput.value = '';
+    submitBtn.textContent = `Guardar ${nombreEntidad}`;
+  }
+
+  function renderTable() {
+    tabla.innerHTML = '';
+    if (!data[collectionKey].length) {
+      tabla.innerHTML = '<tr><td class="empty-row" colspan="2">No hay registros.</td></tr>';
+      return;
+    }
+
+    data[collectionKey].forEach((item) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.nombre}</td>
+        <td>
+          <div class="actions">
+            <button type="button" class="edit-btn" data-id="${item.id}">Editar</button>
+            <button type="button" class="delete-btn" data-id="${item.id}">Eliminar</button>
+          </div>
+        </td>
+      `;
+      tabla.appendChild(tr);
+    });
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const nombre = nombreInput.value.trim();
+    const editId = idInput.value;
+
+    if (!nombre) {
+      showMessage(message, `El nombre de ${nombreEntidad} es obligatorio.`, 'error');
+      return;
+    }
+
+    if (duplicado(nombre, editId || null)) {
+      showMessage(message, `Ya existe un registro duplicado de ${nombreEntidad}.`, 'error');
+      return;
+    }
+
+    if (editId) {
+      const idx = data[collectionKey].findIndex((i) => Number(i.id) === Number(editId));
+      if (idx >= 0) data[collectionKey][idx] = { id: Number(editId), nombre };
+      showMessage(message, `${capitalize(nombreEntidad)} actualizada correctamente.`, 'success');
+    } else {
+      data[collectionKey].push({ id: nextId(data[collectionKey]), nombre });
+      showMessage(message, `${capitalize(nombreEntidad)} creada correctamente.`, 'success');
+    }
+
+    saveData();
+    resetForm();
+    renderAll();
+  });
+
+  tabla.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+
+    const id = Number(target.dataset.id);
+    const item = data[collectionKey].find((i) => Number(i.id) === id);
+    if (!item) return;
+
+    if (target.classList.contains('edit-btn')) {
+      idInput.value = item.id;
+      nombreInput.value = item.nombre;
+      submitBtn.textContent = `Actualizar ${nombreEntidad}`;
+      showMessage(message, `Editando ${nombreEntidad} seleccionada.`, 'success');
+    }
+
+    if (target.classList.contains('delete-btn')) {
+      const ok = confirm(`¿Seguro que desea eliminar ${nombreEntidad}: ${item.nombre}?`);
+      if (!ok) return;
+      data[collectionKey] = data[collectionKey].filter((i) => Number(i.id) !== id);
+      saveData();
+      showMessage(message, `${capitalize(nombreEntidad)} eliminada correctamente.`, 'success');
+      resetForm();
+      renderAll();
+    }
+  });
+
+  return {
+    render: renderTable,
+  };
+}
+
+function capitalize(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+const carreraModule = buildSimpleCRUD({
+  nombreEntidad: 'carrera',
+  collectionKey: 'carreras',
+  form: refs.formCarrera,
+  idInput: refs.carreraId,
+  nombreInput: refs.carreraNombre,
+  tabla: refs.tablaCarreras,
+  submitBtn: refs.carreraSubmit,
+  message: refs.carreraMessage,
 });
 
-setTabs();
-rerender();
+const claseModule = buildSimpleCRUD({
+  nombreEntidad: 'clase',
+  collectionKey: 'clases',
+  form: refs.formClase,
+  idInput: refs.claseId,
+  nombreInput: refs.claseNombre,
+  tabla: refs.tablaClases,
+  submitBtn: refs.claseSubmit,
+  message: refs.claseMessage,
+});
+
+const anioModule = buildSimpleCRUD({
+  nombreEntidad: 'año escolar',
+  collectionKey: 'anios',
+  form: refs.formAnio,
+  idInput: refs.anioId,
+  nombreInput: refs.anioNombre,
+  tabla: refs.tablaAnios,
+  submitBtn: refs.anioSubmit,
+  message: refs.anioMessage,
+});
+
+function renderAll() {
+  renderDashboard();
+  renderAlumnos();
+  carreraModule.render();
+  claseModule.render();
+  anioModule.render();
+}
+
+function init() {
+  ensureDefaultUsuarios();
+  setupAuthEvents();
+  setupTabs();
+  setupAlumnos();
+  toggleViews();
+}
+
+init();

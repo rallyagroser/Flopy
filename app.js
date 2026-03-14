@@ -17,6 +17,7 @@ const defaultData = {
   carreras: [],
   clases: [],
   anios: [],
+  asociaciones: [],
 };
 
 let data = loadData();
@@ -31,8 +32,8 @@ const refs = {
   welcomeText: document.getElementById('welcome-text'),
   logoutBtn: document.getElementById('logout-btn'),
 
-  tabButtons: document.querySelectorAll('.tab-btn'),
-  tabContents: document.querySelectorAll('.tab-content'),
+  navButtons: document.querySelectorAll('.nav-btn'),
+  sections: document.querySelectorAll('.view-section'),
 
   statAlumnos: document.getElementById('stat-alumnos'),
   statCarreras: document.getElementById('stat-carreras'),
@@ -70,9 +71,20 @@ const refs = {
   anioMessage: document.getElementById('anio-message'),
   anioSubmit: document.getElementById('anio-submit'),
   tablaAnios: document.getElementById('tabla-anios'),
+
+  formAsociacion: document.getElementById('form-asociacion'),
+  asociacionId: document.getElementById('asociacion-id'),
+  asocAlumno: document.getElementById('asoc-alumno'),
+  asocCarrera: document.getElementById('asoc-carrera'),
+  asocClase: document.getElementById('asoc-clase'),
+  asocAnio: document.getElementById('asoc-anio'),
+  asociacionSubmit: document.getElementById('asociacion-submit'),
+  asociacionMessage: document.getElementById('asociacion-message'),
+  tablaAsociaciones: document.getElementById('tabla-asociaciones'),
+
+  resumenTexto: document.getElementById('resumen-texto'),
 };
 
-// ---------------------- utilidades ----------------------
 function loadJSON(key, fallback) {
   const raw = localStorage.getItem(key);
   if (!raw) return structuredClone(fallback);
@@ -88,10 +100,9 @@ function saveData() {
 }
 
 function loadData() {
-  const parsed = loadJSON(KEYS.data, defaultData);
   return {
     ...structuredClone(defaultData),
-    ...parsed,
+    ...loadJSON(KEYS.data, defaultData),
   };
 }
 
@@ -113,6 +124,10 @@ function clearMessage(element) {
   showMessage(element, '', '');
 }
 
+function capitalize(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function ensureDefaultUsuarios() {
   const usuarios = loadJSON(KEYS.usuarios, []);
   if (!usuarios.length) {
@@ -120,7 +135,6 @@ function ensureDefaultUsuarios() {
   }
 }
 
-// ---------------------- autenticación ----------------------
 function obtenerUsuarios() {
   return loadJSON(KEYS.usuarios, []);
 }
@@ -149,8 +163,7 @@ function cerrarSesion() {
 }
 
 function validarCredenciales(usuarioIngresado, passwordIngresado) {
-  const usuarios = obtenerUsuarios();
-  return usuarios.find(
+  return obtenerUsuarios().find(
     (u) => u.usuario === usuarioIngresado && u.password === passwordIngresado,
   );
 }
@@ -194,15 +207,15 @@ function setupAuthEvents() {
   refs.logoutBtn.addEventListener('click', cerrarSesion);
 }
 
-// ---------------------- navegación / dashboard ----------------------
-function setupTabs() {
-  refs.tabButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      refs.tabButtons.forEach((b) => b.classList.remove('active'));
-      refs.tabContents.forEach((section) => section.classList.remove('active'));
+function activateSection(sectionId) {
+  refs.navButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.section === sectionId));
+  refs.sections.forEach((section) => section.classList.toggle('active', section.id === sectionId));
+}
 
-      btn.classList.add('active');
-      document.getElementById(btn.dataset.tab).classList.add('active');
+function setupSidebarNavigation() {
+  refs.navButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activateSection(btn.dataset.section);
     });
   });
 }
@@ -214,7 +227,10 @@ function renderDashboard() {
   refs.statAnios.textContent = data.anios.length;
 }
 
-// ---------------------- alumnos ----------------------
+function renderResumen() {
+  refs.resumenTexto.textContent = `Actualmente existen ${data.alumnos.length} alumnos, ${data.carreras.length} carreras, ${data.clases.length} clases, ${data.anios.length} años y ${data.asociaciones.length} asociaciones registradas en el sistema.`;
+}
+
 function alumnoDuplicado(payload, excludeId = null) {
   return data.alumnos.some((alumno) => {
     if (excludeId !== null && Number(alumno.id) === Number(excludeId)) return false;
@@ -321,6 +337,7 @@ function setupAlumnos() {
       if (!ok) return;
 
       data.alumnos = data.alumnos.filter((a) => Number(a.id) !== id);
+      data.asociaciones = data.asociaciones.filter((a) => Number(a.alumnoId) !== id);
       saveData();
       showMessage(refs.alumnoMessage, 'Alumno eliminado correctamente.', 'success');
       resetAlumnoForm();
@@ -329,7 +346,6 @@ function setupAlumnos() {
   });
 }
 
-// ---------------------- carreras / clases / años ----------------------
 function buildSimpleCRUD(config) {
   const { nombreEntidad, collectionKey, form, idInput, nombreInput, tabla, submitBtn, message } = config;
 
@@ -415,7 +431,17 @@ function buildSimpleCRUD(config) {
     if (target.classList.contains('delete-btn')) {
       const ok = confirm(`¿Seguro que desea eliminar ${nombreEntidad}: ${item.nombre}?`);
       if (!ok) return;
+
       data[collectionKey] = data[collectionKey].filter((i) => Number(i.id) !== id);
+      const fkMap = {
+        carreras: 'carreraId',
+        clases: 'claseId',
+        anios: 'anioId',
+      };
+      if (fkMap[collectionKey]) {
+        data.asociaciones = data.asociaciones.filter((a) => Number(a[fkMap[collectionKey]]) !== id);
+      }
+
       saveData();
       showMessage(message, `${capitalize(nombreEntidad)} eliminada correctamente.`, 'success');
       resetForm();
@@ -423,13 +449,151 @@ function buildSimpleCRUD(config) {
     }
   });
 
-  return {
-    render: renderTable,
-  };
+  return { render: renderTable };
 }
 
-function capitalize(text) {
-  return text.charAt(0).toUpperCase() + text.slice(1);
+function setOptions(select, items, placeholder, selected = '') {
+  const options = [`<option value="">${placeholder}</option>`].concat(
+    items.map((item) => `<option value="${item.id}" ${String(selected) === String(item.id) ? 'selected' : ''}>${item.nombre}</option>`),
+  );
+  select.innerHTML = options.join('');
+}
+
+function setAlumnoOptions(selected = '') {
+  const options = ['<option value="">Seleccione alumno</option>'].concat(
+    data.alumnos.map((alumno) => {
+      const label = `${alumno.nombre} ${alumno.apellido}`;
+      return `<option value="${alumno.id}" ${String(selected) === String(alumno.id) ? 'selected' : ''}>${label}</option>`;
+    }),
+  );
+  refs.asocAlumno.innerHTML = options.join('');
+}
+
+function getNombreById(list, id, fallback = 'Sin registro') {
+  const item = list.find((i) => Number(i.id) === Number(id));
+  return item ? item.nombre : fallback;
+}
+
+function getAlumnoLabel(id) {
+  const alumno = data.alumnos.find((a) => Number(a.id) === Number(id));
+  return alumno ? `${alumno.nombre} ${alumno.apellido}` : 'Sin alumno';
+}
+
+function populateAssociationSelects(selected = {}) {
+  setAlumnoOptions(selected.alumnoId || '');
+  setOptions(refs.asocCarrera, data.carreras, 'Seleccione carrera', selected.carreraId || '');
+  setOptions(refs.asocClase, data.clases, 'Seleccione clase', selected.claseId || '');
+  setOptions(refs.asocAnio, data.anios, 'Seleccione año', selected.anioId || '');
+}
+
+function resetAsociacionForm() {
+  refs.formAsociacion.reset();
+  refs.asociacionId.value = '';
+  refs.asociacionSubmit.textContent = 'Guardar asociación';
+  populateAssociationSelects();
+}
+
+function existeAsociacion(payload, excludeId = null) {
+  return data.asociaciones.some((item) => {
+    if (excludeId !== null && Number(item.id) === Number(excludeId)) return false;
+    return Number(item.alumnoId) === Number(payload.alumnoId)
+      && Number(item.carreraId) === Number(payload.carreraId)
+      && Number(item.claseId) === Number(payload.claseId)
+      && Number(item.anioId) === Number(payload.anioId);
+  });
+}
+
+function renderAsociaciones() {
+  refs.tablaAsociaciones.innerHTML = '';
+  if (!data.asociaciones.length) {
+    refs.tablaAsociaciones.innerHTML = '<tr><td class="empty-row" colspan="5">No hay asociaciones registradas.</td></tr>';
+    return;
+  }
+
+  data.asociaciones.forEach((asoc) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${getAlumnoLabel(asoc.alumnoId)}</td>
+      <td>${getNombreById(data.carreras, asoc.carreraId, 'Sin carrera')}</td>
+      <td>${getNombreById(data.clases, asoc.claseId, 'Sin clase')}</td>
+      <td>${getNombreById(data.anios, asoc.anioId, 'Sin año')}</td>
+      <td>
+        <div class="actions">
+          <button type="button" class="edit-btn" data-id="${asoc.id}">Editar</button>
+          <button type="button" class="delete-btn" data-id="${asoc.id}">Eliminar</button>
+        </div>
+      </td>
+    `;
+    refs.tablaAsociaciones.appendChild(tr);
+  });
+}
+
+function setupAsociaciones() {
+  refs.formAsociacion.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    if (!data.alumnos.length || !data.carreras.length || !data.clases.length || !data.anios.length) {
+      showMessage(refs.asociacionMessage, 'Debe crear al menos un alumno, carrera, clase y año.', 'error');
+      return;
+    }
+
+    const payload = {
+      alumnoId: Number(refs.asocAlumno.value),
+      carreraId: Number(refs.asocCarrera.value),
+      claseId: Number(refs.asocClase.value),
+      anioId: Number(refs.asocAnio.value),
+    };
+
+    if (!payload.alumnoId || !payload.carreraId || !payload.claseId || !payload.anioId) {
+      showMessage(refs.asociacionMessage, 'Seleccione todos los campos para la asociación.', 'error');
+      return;
+    }
+
+    const editId = refs.asociacionId.value;
+    if (existeAsociacion(payload, editId || null)) {
+      showMessage(refs.asociacionMessage, 'La asociación ya existe.', 'error');
+      return;
+    }
+
+    if (editId) {
+      const idx = data.asociaciones.findIndex((a) => Number(a.id) === Number(editId));
+      if (idx >= 0) data.asociaciones[idx] = { id: Number(editId), ...payload };
+      showMessage(refs.asociacionMessage, 'Asociación actualizada correctamente.', 'success');
+    } else {
+      data.asociaciones.push({ id: nextId(data.asociaciones), ...payload });
+      showMessage(refs.asociacionMessage, 'Asociación creada correctamente.', 'success');
+    }
+
+    saveData();
+    resetAsociacionForm();
+    renderAll();
+  });
+
+  refs.tablaAsociaciones.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+
+    const id = Number(target.dataset.id);
+    const asoc = data.asociaciones.find((a) => Number(a.id) === id);
+    if (!asoc) return;
+
+    if (target.classList.contains('edit-btn')) {
+      refs.asociacionId.value = asoc.id;
+      refs.asociacionSubmit.textContent = 'Actualizar asociación';
+      populateAssociationSelects(asoc);
+      showMessage(refs.asociacionMessage, 'Editando asociación seleccionada.', 'success');
+    }
+
+    if (target.classList.contains('delete-btn')) {
+      const ok = confirm('¿Seguro que desea eliminar esta asociación?');
+      if (!ok) return;
+      data.asociaciones = data.asociaciones.filter((a) => Number(a.id) !== id);
+      saveData();
+      showMessage(refs.asociacionMessage, 'Asociación eliminada correctamente.', 'success');
+      resetAsociacionForm();
+      renderAll();
+    }
+  });
 }
 
 const carreraModule = buildSimpleCRUD({
@@ -467,17 +631,21 @@ const anioModule = buildSimpleCRUD({
 
 function renderAll() {
   renderDashboard();
+  renderResumen();
   renderAlumnos();
   carreraModule.render();
   claseModule.render();
   anioModule.render();
+  populateAssociationSelects();
+  renderAsociaciones();
 }
 
 function init() {
   ensureDefaultUsuarios();
   setupAuthEvents();
-  setupTabs();
+  setupSidebarNavigation();
   setupAlumnos();
+  setupAsociaciones();
   toggleViews();
 }
 

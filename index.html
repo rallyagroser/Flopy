@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema Académico Local</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Sistema Académico</h1>
+    <nav>
+      <button class="tab-btn active" data-tab="configuracion">Configuración</button>
+      <button class="tab-btn" data-tab="principal">Principal</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="configuracion" class="tab-content active">
+      <h2>Configuración</h2>
+      <p>Registra carreras, clases, años escolares y alumnos. Los datos se guardan en <code>localStorage</code>.</p>
+
+      <div class="grid">
+        <article class="card">
+          <h3>Registrar carrera</h3>
+          <form id="career-form">
+            <input type="text" id="career-name" placeholder="Ej: Ingeniería de Sistemas" required>
+            <button type="submit">Guardar carrera</button>
+          </form>
+          <ul id="career-list" class="simple-list"></ul>
+        </article>
+
+        <article class="card">
+          <h3>Registrar clase</h3>
+          <form id="class-form">
+            <input type="text" id="class-name" placeholder="Ej: Matemáticas" required>
+            <button type="submit">Guardar clase</button>
+          </form>
+          <ul id="class-list" class="simple-list"></ul>
+        </article>
+
+        <article class="card">
+          <h3>Registrar año escolar</h3>
+          <form id="year-form">
+            <input type="text" id="year-name" placeholder="Ej: 1er año" required>
+            <button type="submit">Guardar año</button>
+          </form>
+          <ul id="year-list" class="simple-list"></ul>
+        </article>
+
+        <article class="card student-card">
+          <h3>Registrar alumno</h3>
+          <form id="student-form">
+            <input type="text" id="student-firstname" placeholder="Nombre" required>
+            <input type="text" id="student-lastname" placeholder="Apellido" required>
+            <input type="text" id="student-id" placeholder="Documento" required>
+            <input type="email" id="student-email" placeholder="Correo" required>
+            <button type="submit">Guardar alumno</button>
+          </form>
+          <ul id="student-list" class="simple-list"></ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="principal" class="tab-content">
+      <h2>Principal</h2>
+      <p>Asocia carrera con año, año con clases y alumno con año.</p>
+
+      <div class="grid">
+        <article class="card">
+          <h3>Asociar carrera con año</h3>
+          <form id="career-year-form">
+            <select id="career-select" required></select>
+            <select id="year-for-career-select" required></select>
+            <button type="submit">Asociar</button>
+          </form>
+          <ul id="career-year-list" class="simple-list"></ul>
+        </article>
+
+        <article class="card">
+          <h3>Asociar año con clase</h3>
+          <form id="year-class-form">
+            <select id="year-for-class-select" required></select>
+            <select id="class-select" required></select>
+            <button type="submit">Asociar</button>
+          </form>
+          <ul id="year-class-list" class="simple-list"></ul>
+        </article>
+
+        <article class="card">
+          <h3>Asociar alumno con año</h3>
+          <form id="student-year-form">
+            <select id="student-select" required></select>
+            <select id="year-for-student-select" required></select>
+            <button type="submit">Asociar</button>
+          </form>
+          <ul id="student-year-list" class="simple-list"></ul>
+        </article>
+      </div>
+
+      <article class="card table-card">
+        <h3>Resumen de alumnos</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Alumno</th>
+              <th>Carrera</th>
+              <th>Año</th>
+            </tr>
+          </thead>
+          <tbody id="student-summary-body"></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+
+  <template id="empty-row-template">
+    <tr>
+      <td colspan="3" class="empty">Aún no hay datos para mostrar.</td>
+    </tr>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

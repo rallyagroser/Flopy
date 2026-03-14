@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema Académico Local</title>
+  <title>Flopy - Sistema Académico</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <section id="login-view" class="auth-wrapper">
     <article class="auth-card">
-      <h1>Sistema Académico</h1>
+      <h1>Sistema Académico Flopy</h1>
       <p class="subtitle">Inicia sesión para continuar</p>
       <form id="login-form">
         <label for="login-usuario">Usuario</label>
@@ -25,109 +25,147 @@
     </article>
   </section>
 
-  <section id="app-view" class="hidden">
-    <header>
-      <div>
-        <h1>Sistema Académico</h1>
-        <p id="welcome-text" class="subtitle"></p>
+  <section id="app-view" class="hidden app-layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h2>🎓 Flopy</h2>
+        <p>Panel académico</p>
       </div>
-      <button id="logout-btn" class="danger-btn">Cerrar sesión</button>
-    </header>
-
-    <main>
-      <nav class="tabs">
-        <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-        <button class="tab-btn" data-tab="alumnos">Alumnos</button>
-        <button class="tab-btn" data-tab="carreras">Carreras</button>
-        <button class="tab-btn" data-tab="clases">Clases</button>
-        <button class="tab-btn" data-tab="anios">Años escolares</button>
+      <nav class="menu">
+        <button class="nav-btn active" data-section="dashboard">📊 Dashboard</button>
+        <button class="nav-btn" data-section="carreras">🎓 Carreras</button>
+        <button class="nav-btn" data-section="clases">📘 Clases</button>
+        <button class="nav-btn" data-section="anios">🗓️ Años</button>
+        <button class="nav-btn" data-section="alumnos">👨‍🎓 Alumnos</button>
+        <button class="nav-btn" data-section="asociaciones">🔗 Asociaciones</button>
+        <button class="nav-btn" data-section="resumen">🧾 Resumen</button>
       </nav>
+      <button id="logout-btn" class="danger-btn">Cerrar sesión</button>
+    </aside>
 
-      <section id="dashboard" class="tab-content active">
-        <h2>Dashboard</h2>
-        <div class="stats-grid">
-          <article class="stat-card"><h3>Alumnos</h3><p id="stat-alumnos">0</p></article>
-          <article class="stat-card"><h3>Carreras</h3><p id="stat-carreras">0</p></article>
-          <article class="stat-card"><h3>Clases</h3><p id="stat-clases">0</p></article>
-          <article class="stat-card"><h3>Años escolares</h3><p id="stat-anios">0</p></article>
+    <div class="content-area">
+      <header>
+        <div>
+          <h1>Sistema Académico</h1>
+          <p id="welcome-text" class="subtitle"></p>
         </div>
-      </section>
+      </header>
 
-      <section id="alumnos" class="tab-content">
-        <h2>Gestión de alumnos</h2>
-        <form id="form-alumno" class="entity-form">
-          <input type="hidden" id="alumno-id">
-          <input type="text" id="alumno-nombre" placeholder="Nombre" required>
-          <input type="text" id="alumno-apellido" placeholder="Apellido" required>
-          <input type="text" id="alumno-documento" placeholder="Documento" required>
-          <input type="email" id="alumno-correo" placeholder="Correo" required>
-          <button type="submit" id="alumno-submit">Guardar alumno</button>
-        </form>
-        <p id="alumno-message" class="message"></p>
-        <input type="text" id="alumno-search" placeholder="Buscar alumno por nombre, documento o correo...">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Documento</th>
-                <th>Correo</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-alumnos"></tbody>
-          </table>
-        </div>
-      </section>
+      <main>
+        <section id="dashboard" class="view-section active">
+          <h2>Dashboard general</h2>
+          <div class="stats-grid">
+            <article class="stat-card students"><span>👨‍🎓</span><p id="stat-alumnos">0</p><h3>Alumnos registrados</h3></article>
+            <article class="stat-card careers"><span>🎓</span><p id="stat-carreras">0</p><h3>Carreras</h3></article>
+            <article class="stat-card classes"><span>📘</span><p id="stat-clases">0</p><h3>Clases</h3></article>
+            <article class="stat-card years"><span>🗓️</span><p id="stat-anios">0</p><h3>Años escolares</h3></article>
+          </div>
+        </section>
 
-      <section id="carreras" class="tab-content">
-        <h2>Gestión de carreras</h2>
-        <form id="form-carrera" class="entity-form compact">
-          <input type="hidden" id="carrera-id">
-          <input type="text" id="carrera-nombre" placeholder="Nombre de la carrera" required>
-          <button type="submit" id="carrera-submit">Guardar carrera</button>
-        </form>
-        <p id="carrera-message" class="message"></p>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Carrera</th><th>Acciones</th></tr></thead>
-            <tbody id="tabla-carreras"></tbody>
-          </table>
-        </div>
-      </section>
+        <section id="carreras" class="view-section">
+          <h2>Gestión de carreras</h2>
+          <form id="form-carrera" class="entity-form compact">
+            <input type="hidden" id="carrera-id">
+            <input type="text" id="carrera-nombre" placeholder="Nombre de la carrera" required>
+            <button type="submit" id="carrera-submit">Guardar carrera</button>
+          </form>
+          <p id="carrera-message" class="message"></p>
+          <div class="table-wrap">
+            <table class="pro-table">
+              <thead><tr><th>Carrera</th><th>Acciones</th></tr></thead>
+              <tbody id="tabla-carreras"></tbody>
+            </table>
+          </div>
+        </section>
 
-      <section id="clases" class="tab-content">
-        <h2>Gestión de clases</h2>
-        <form id="form-clase" class="entity-form compact">
-          <input type="hidden" id="clase-id">
-          <input type="text" id="clase-nombre" placeholder="Nombre de la clase" required>
-          <button type="submit" id="clase-submit">Guardar clase</button>
-        </form>
-        <p id="clase-message" class="message"></p>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Clase</th><th>Acciones</th></tr></thead>
-            <tbody id="tabla-clases"></tbody>
-          </table>
-        </div>
-      </section>
+        <section id="clases" class="view-section">
+          <h2>Gestión de clases</h2>
+          <form id="form-clase" class="entity-form compact">
+            <input type="hidden" id="clase-id">
+            <input type="text" id="clase-nombre" placeholder="Nombre de la clase" required>
+            <button type="submit" id="clase-submit">Guardar clase</button>
+          </form>
+          <p id="clase-message" class="message"></p>
+          <div class="table-wrap">
+            <table class="pro-table">
+              <thead><tr><th>Clase</th><th>Acciones</th></tr></thead>
+              <tbody id="tabla-clases"></tbody>
+            </table>
+          </div>
+        </section>
 
-      <section id="anios" class="tab-content">
-        <h2>Gestión de años escolares</h2>
-        <form id="form-anio" class="entity-form compact">
-          <input type="hidden" id="anio-id">
-          <input type="text" id="anio-nombre" placeholder="Ej: 2025" required>
-          <button type="submit" id="anio-submit">Guardar año</button>
-        </form>
-        <p id="anio-message" class="message"></p>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Año escolar</th><th>Acciones</th></tr></thead>
-            <tbody id="tabla-anios"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+        <section id="anios" class="view-section">
+          <h2>Gestión de años escolares</h2>
+          <form id="form-anio" class="entity-form compact">
+            <input type="hidden" id="anio-id">
+            <input type="text" id="anio-nombre" placeholder="Ej: 2026" required>
+            <button type="submit" id="anio-submit">Guardar año</button>
+          </form>
+          <p id="anio-message" class="message"></p>
+          <div class="table-wrap">
+            <table class="pro-table">
+              <thead><tr><th>Año escolar</th><th>Acciones</th></tr></thead>
+              <tbody id="tabla-anios"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="alumnos" class="view-section">
+          <h2>Gestión de alumnos</h2>
+          <form id="form-alumno" class="entity-form">
+            <input type="hidden" id="alumno-id">
+            <input type="text" id="alumno-nombre" placeholder="Nombre" required>
+            <input type="text" id="alumno-apellido" placeholder="Apellido" required>
+            <input type="text" id="alumno-documento" placeholder="Documento" required>
+            <input type="email" id="alumno-correo" placeholder="Correo" required>
+            <button type="submit" id="alumno-submit">Guardar alumno</button>
+          </form>
+          <p id="alumno-message" class="message"></p>
+          <input type="text" id="alumno-search" placeholder="Buscar alumno por nombre, documento o correo...">
+          <div class="table-wrap">
+            <table class="pro-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Documento</th>
+                  <th>Correo</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-alumnos"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="asociaciones" class="view-section">
+          <h2>Asociaciones académicas</h2>
+          <form id="form-asociacion" class="entity-form assoc-form">
+            <input type="hidden" id="asociacion-id">
+            <select id="asoc-alumno" required></select>
+            <select id="asoc-carrera" required></select>
+            <select id="asoc-clase" required></select>
+            <select id="asoc-anio" required></select>
+            <button type="submit" id="asociacion-submit">Guardar asociación</button>
+          </form>
+          <p id="asociacion-message" class="message"></p>
+          <div class="table-wrap">
+            <table class="pro-table">
+              <thead>
+                <tr><th>Alumno</th><th>Carrera</th><th>Clase</th><th>Año</th><th>Acciones</th></tr>
+              </thead>
+              <tbody id="tabla-asociaciones"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="resumen" class="view-section">
+          <h2>Resumen</h2>
+          <div class="summary-box">
+            <p id="resumen-texto"></p>
+          </div>
+        </section>
+      </main>
+    </div>
   </section>
 
   <script src="app.js"></script>
